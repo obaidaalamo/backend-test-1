@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
-import { ValidationError } from 'joi';
-import ListUsers from '../../application/use_cases/user/ListUsers';
-import GetUser from '../../application/use_cases/user/GetUser';
-import CreateUser from '../../application/use_cases/user/CreateUser';
-import UpdateUser from '../../application/use_cases/user/UpdateUser';
-import DeleteUser from '../../application/use_cases/user/DeleteUser';
-import { ServiceLocator } from '../../infrastructure/config/service-locator';
-import User from '../../domain/entities/User';
+import { Request, Response } from "express";
+import { ValidationError } from "joi";
+import ListUsers from "../../application/use_cases/user/ListUsers";
+import GetUser from "../../application/use_cases/user/GetUser";
+import CreateUser from "../../application/use_cases/user/CreateUser";
+import UpdateUser from "../../application/use_cases/user/UpdateUser";
+import DeleteUser from "../../application/use_cases/user/DeleteUser";
+import { ServiceLocator } from "../../infrastructure/config/service-locator";
+import User from "../../domain/entities/User";
+import DeleteAllUserBlog from "../../application/use_cases/user_blog/DeleteAllUserBlog";
+import DeleteAllBlog from "../../application/use_cases/blog/DeleteAllBlog";
 
 export default {
-
   async findUsers(request: Request, response: Response) {
     // Context
     const serviceLocator: ServiceLocator = request.serviceLocator!;
@@ -18,8 +19,9 @@ export default {
     const users = await ListUsers(serviceLocator);
 
     // Output
-    const output = users
-      .map((user: User) => serviceLocator.userSerializer.serialize(user, serviceLocator));
+    const output = users.map((user: User) =>
+      serviceLocator.userSerializer.serialize(user, serviceLocator)
+    );
     return response.json(output);
   },
 
@@ -40,9 +42,12 @@ export default {
 
     // Output
     if (!user) {
-      return response.status(404).json({ message: 'Not Found' });
+      return response.status(404).json({ message: "Not Found" });
     }
-    const output = serviceLocator.userSerializer.serialize(user, serviceLocator);
+    const output = serviceLocator.userSerializer.serialize(
+      user,
+      serviceLocator
+    );
     return response.json(output);
   },
 
@@ -79,7 +84,10 @@ export default {
     if (!user) {
       return response.status(400).json({ message: error });
     }
-    const output = serviceLocator.userSerializer.serialize(user, serviceLocator);
+    const output = serviceLocator.userSerializer.serialize(
+      user,
+      serviceLocator
+    );
     return response.status(201).json(output);
   },
 
@@ -91,26 +99,24 @@ export default {
     const userId = request.params.id;
     const inputData = request.body;
     const data: any = {
-      id: userId
+      id: userId,
     };
     const acceptedFields: string[][] = [
-      ['first_name', 'firstName'],
-      ['last_name', 'lastName'],
-      ['email'],
-      ['phone'],
-      ['active'],
-      ['role'],
-      ['country'],
-      ['city'],
-      ['nationality'],
-      ['photo'],
+      ["first_name", "firstName"],
+      ["last_name", "lastName"],
+      ["email"],
+      ["phone"],
+      ["active"],
+      ["role"],
+      ["country"],
+      ["city"],
+      ["nationality"],
+      ["photo"],
     ];
     acceptedFields.forEach((acceptedField) => {
       if (inputData[acceptedField[0]] === undefined) return;
-      data[acceptedField.length > 1
-        ? acceptedField[1]
-        : acceptedField[0]
-      ] = inputData[acceptedField[0]];
+      data[acceptedField.length > 1 ? acceptedField[1] : acceptedField[0]] =
+        inputData[acceptedField[0]];
     });
 
     // Treatment
@@ -131,7 +137,10 @@ export default {
     if (!user) {
       return response.status(400).json({ message: error });
     }
-    const output = serviceLocator.userSerializer.serialize(user, serviceLocator);
+    const output = serviceLocator.userSerializer.serialize(
+      user,
+      serviceLocator
+    );
     return response.json(output);
   },
 
@@ -146,13 +155,22 @@ export default {
     // THIS IS HOW TO ACCESS userId FROM AccessToken
     // ---------------------------------------------
     const userId = request.userId;
+    const data: any = {
+      id: userId,
+    };
     // ---------------------------------------------
     // ---------------------------------------------
 
     // Treatment
     let user = null;
+    let blog = null;
+    let user_blog = null;
     try {
       user = await DeleteUser(toDeleteUserId, serviceLocator);
+      // Delete all user blogs
+      user_blog = await DeleteAllUserBlog(data, serviceLocator);
+      // Delete all user blogs
+      blog = await DeleteAllBlog(data, serviceLocator);
     } catch (err: unknown) {
       if (err instanceof Error) {
         console.log(err);
@@ -161,9 +179,8 @@ export default {
 
     // Output
     if (!user) {
-      return response.status(404).json({ message: 'Not Found' });
+      return response.status(404).json({ message: "Not Found" });
     }
     return response.sendStatus(204);
   },
-
 };
